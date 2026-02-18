@@ -77,4 +77,12 @@ export interface LibraryItem {
     description?: string;
     created_at: string;
     file_type?: string;
+    is_master_file?: boolean;
+}
+
+export interface Review {
+    id: string;
+    user_id: string;
+    review_url: string;
+    created_at: string;
 }

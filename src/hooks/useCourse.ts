@@ -37,12 +37,23 @@ export function useModules() {
 
                 const completedIds = new Set(progressData?.map((p: any) => p.day_id));
 
+                // Check for review
+                const { data: reviewData } = await supabase
+                    .from('reviews')
+                    .select('id')
+                    .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+                    .single();
+
+                const hasReview = !!reviewData;
+
                 if (data) {
                     const transformed: Module[] = data.map((w) => ({
                         id: w.id,
                         title: w.title,
                         description: w.description,
-                        isLocked: w.available_from ? new Date(w.available_from) > new Date() : false,
+                        isLocked: w.id === 'bonus'
+                            ? !hasReview
+                            : (w.available_from ? new Date(w.available_from) > new Date() : false),
                         availableFrom: w.available_from,
                         lektionen: w.days
                             .sort((a: any, b: any) => a.order_index - b.order_index)

@@ -89,7 +89,12 @@ export default function Library() {
         }
     };
 
-    const filteredItems = activeCategory === 'all' ? items : items.filter(i => i.category === activeCategory);
+    const masterFile = items.find(i => i.is_master_file);
+    const regularItems = items.filter(i => !i.is_master_file);
+
+    const filteredItems = activeCategory === 'all'
+        ? regularItems
+        : regularItems.filter(i => i.category === activeCategory);
 
     return (
         <div className="animate-fade-in space-y-6">
@@ -105,17 +110,47 @@ export default function Library() {
                         <p className="text-white/50 font-body text-lg">Alle Materialien und Unterlagen zum Herunterladen</p>
                     </div>
                 </div>
+            </div>
 
+            {/* Master File Hero */}
+            {masterFile && (
+                <div className="mx-6 md:mx-8 -mt-6 relative z-20">
+                    <div className="bg-gradient-to-r from-vastu-gold to-yellow-600 rounded-xl p-1 shadow-lg transform transition-transform hover:scale-[1.01]">
+                        <div className="bg-white rounded-lg p-6 flex flex-col md:flex-row items-center gap-6">
+                            <div className="w-16 h-16 bg-vastu-gold/10 rounded-full flex items-center justify-center shrink-0">
+                                <BookOpen className="text-vastu-gold w-8 h-8" />
+                            </div>
+                            <div className="flex-1 text-center md:text-left">
+                                <div className="text-xs font-sans font-bold text-vastu-gold uppercase tracking-wider mb-1">Master File</div>
+                                <h3 className="font-serif text-xl md:text-2xl text-vastu-dark mb-2">{masterFile.title}</h3>
+                                <p className="text-vastu-text-light text-sm max-w-xl">{masterFile.description || 'Das vollständige Kursmaterial zum Herunterladen.'}</p>
+                            </div>
+                            <a
+                                href={masterFile.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="bg-vastu-dark text-white px-8 py-3 rounded-lg font-medium flex items-center gap-2 hover:bg-vastu-dark/90 transition-colors shadow-md whitespace-nowrap"
+                            >
+                                <Download size={20} />
+                                <span>Herunterladen</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Resource Grid Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-vastu-sand/50 overflow-hidden">
                 {/* Category Tabs */}
-                <div className="px-6 md:px-8 pt-6 pb-2">
+                <div className="px-6 md:px-8 pt-6 pb-2 border-b border-vastu-sand/20">
                     <div className="flex gap-2 overflow-x-auto pb-2">
                         {CATEGORIES.map(cat => (
                             <button
                                 key={cat.key}
                                 onClick={() => setActiveCategory(cat.key)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-sans font-medium transition-all whitespace-nowrap ${activeCategory === cat.key
-                                        ? 'bg-vastu-dark text-white shadow-md'
-                                        : 'bg-vastu-cream text-vastu-text-light hover:bg-vastu-sand/50'
+                                    ? 'bg-vastu-dark text-white shadow-md'
+                                    : 'bg-vastu-cream text-vastu-text-light hover:bg-vastu-sand/50'
                                     }`}
                             >
                                 <cat.icon size={16} />
@@ -126,7 +161,7 @@ export default function Library() {
                 </div>
 
                 {/* Items */}
-                <div className="p-6 md:p-8 pt-4">
+                <div className="p-6 md:p-8 pt-6">
                     {filteredItems.length === 0 ? (
                         <div className="text-center py-12 text-vastu-text-light">
                             <BookOpen size={48} className="mx-auto mb-4 opacity-30" />

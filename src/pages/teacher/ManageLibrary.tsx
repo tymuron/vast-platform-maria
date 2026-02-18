@@ -133,7 +133,89 @@ export default function ManageLibrary() {
                 </button>
             </div>
 
-            {/* Drop Zone */}
+            {/* Master File Settings */}
+            <div className="bg-gradient-to-r from-vastu-gold/10 to-yellow-50 rounded-xl p-8 mb-8 border border-vastu-gold/20">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex-1">
+                        <h3 className="text-xl font-serif text-vastu-dark mb-2">Master File</h3>
+                        <p className="text-sm text-vastu-text-light mb-4 text-left">
+                            Lade hier das vollständige Kursbuch oder die Haupt-Datei hoch. Diese wird in der Bibliothek oben hervorgehoben.
+                        </p>
+
+                        {items.find(i => i.is_master_file) ? (
+                            <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-vastu-sand/30 shadow-sm">
+                                <div className="w-10 h-10 bg-vastu-gold/10 rounded-full flex items-center justify-center text-vastu-gold shrink-0">
+                                    <FileText size={20} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-vastu-dark truncate">{items.find(i => i.is_master_file)?.title}</div>
+                                    <div className="text-xs text-vastu-text-light">Aktuelle Master-Datei</div>
+                                </div>
+                                <a href={items.find(i => i.is_master_file)?.file_url} target="_blank" rel="noreferrer" className="text-vastu-gold hover:text-vastu-dark transition-colors">
+                                    <LinkIcon size={18} />
+                                </a>
+                            </div>
+                        ) : (
+                            <div className="text-sm text-vastu-text-light italic bg-white/50 p-3 rounded-lg border border-dashed border-vastu-sand/30">
+                                Noch keine Master-Datei festgelegt.
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="relative shrink-0">
+                        <input
+                            type="file"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                            onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                    setLoading(true);
+                                    const fileExt = file.name.split('.').pop();
+                                    const fileName = `master-${Math.random()}.${fileExt}`;
+                                    const { error: uploadError } = await supabase.storage.from('library_files').upload(fileName, file);
+                                    if (uploadError) throw uploadError;
+                                    const { data: { publicUrl } } = supabase.storage.from('library_files').getPublicUrl(fileName);
+                                    const title = file.name.replace(/\.[^/.]+$/, "");
+
+                                    // Insert new master file
+                                    const { error: insertError } = await supabase.from('library_items').insert([{
+                                        title,
+                                        category: 'guide', // Use guide as category but mark as master
+                                        file_url: publicUrl,
+                                        description: 'Master File',
+                                        is_master_file: true
+                                    }]);
+                                    if (insertError) throw insertError;
+
+                                    // Mark all others as not master (logic handled by ensure-single-master trigger ideally, but manual upkeep for now)
+                                    // Actually, we should unset others first? Or trust that frontend renders only one or first one?
+                                    // User requirement: "If yes, allow replacing it."
+                                    // Simple approach: When uploading master, find old one and delete it or unmark it?
+                                    // Let's unmark old ones.
+                                    const oldMasters = items.filter(i => i.is_master_file);
+                                    if (oldMasters.length > 0) {
+                                        for (const old of oldMasters) {
+                                            await supabase.from('library_items').update({ is_master_file: false }).eq('id', old.id);
+                                        }
+                                    }
+
+                                    alert('Master File erfolgreich aktualisiert!');
+                                    fetchLibrary();
+                                } catch (error: any) {
+                                    alert(`Fehler: ${error.message}`);
+                                } finally {
+                                    setLoading(false);
+                                }
+                            }}
+                        />
+                        <button className="bg-vastu-dark text-white px-6 py-3 rounded-lg flex items-center gap-2 hover:bg-vastu-dark/90 transition-colors shadow-md">
+                            <Upload size={18} />
+                            <span>{items.find(i => i.is_master_file) ? 'Ersetzen' : 'Hochladen'}</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
             <div
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
