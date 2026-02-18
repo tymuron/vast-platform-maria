@@ -1,0 +1,137 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
+
+export default function LoginPage() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const navigate = useNavigate();
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        setLoading(true);
+
+        try {
+            if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
+                navigate('/student/welcome');
+                return;
+            }
+
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+            if (error) {
+                if (error.message.includes('Invalid login')) {
+                    setError('Ungültige E-Mail oder Passwort');
+                } else {
+                    setError(error.message);
+                }
+            } else {
+                navigate('/student/welcome');
+            }
+        } catch (err) {
+            setError('Ein Fehler ist aufgetreten. Bitte versuche es erneut.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen bg-vastu-cream flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background decorative elements */}
+            <div className="absolute top-0 left-0 w-96 h-96 bg-vastu-dark/5 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2" />
+            <div className="absolute bottom-0 right-0 w-80 h-80 bg-vastu-gold/10 rounded-full blur-[100px] translate-x-1/3 translate-y-1/3" />
+
+            <div className="w-full max-w-md relative z-10 animate-fade-in">
+                {/* Brand */}
+                <div className="text-center mb-10">
+                    <div className="w-18 h-18 mx-auto mb-5 relative">
+                        <div className="w-[72px] h-[72px] mx-auto rounded-full border-2 border-vastu-dark/30 flex items-center justify-center">
+                            <span className="font-script text-vastu-dark text-4xl leading-none mt-1">V</span>
+                        </div>
+                    </div>
+                    <h1 className="text-3xl font-serif tracking-[0.15em] text-vastu-dark">VASTULOGIE</h1>
+                    <p className="font-script text-vastu-gold text-xl mt-1">Ausbildung</p>
+                </div>
+
+                {/* Ornamental divider */}
+                <div className="ornament-divider mb-8">
+                    <span>◆</span>
+                </div>
+
+                {/* Login Card — frosted glass */}
+                <div className="glass-card rounded-2xl p-8">
+                    <h2 className="font-serif text-2xl text-vastu-dark mb-6 text-center">Anmelden</h2>
+
+                    {error && (
+                        <div className="bg-red-50 text-red-600 text-sm font-sans p-3 rounded-xl mb-4 border border-red-100">
+                            {error}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleLogin} className="space-y-5">
+                        <div>
+                            <label className="block text-sm font-sans font-medium text-vastu-dark mb-1.5">E-Mail</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-4 py-3 bg-white/80 border border-vastu-sand rounded-xl focus:ring-2 focus:ring-vastu-gold/40 focus:border-vastu-gold transition-all outline-none font-body text-base"
+                                placeholder="deine@email.de"
+                                required
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-sans font-medium text-vastu-dark mb-1.5">Passwort</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 bg-white/80 border border-vastu-sand rounded-xl focus:ring-2 focus:ring-vastu-gold/40 focus:border-vastu-gold transition-all outline-none pr-12 font-body text-base"
+                                    placeholder="••••••••"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-vastu-accent hover:text-vastu-dark transition-colors"
+                                >
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full bg-vastu-dark text-white py-3.5 rounded-xl font-sans font-medium hover:bg-vastu-dark-deep transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-vastu-dark/20"
+                        >
+                            {loading ? <Loader2 className="animate-spin" size={20} /> : 'Anmelden'}
+                        </button>
+                    </form>
+
+                    <div className="mt-5 text-center">
+                        <Link to="/forgot-password" className="text-sm font-sans text-vastu-text-light hover:text-vastu-dark transition-colors">
+                            Passwort vergessen?
+                        </Link>
+                    </div>
+                </div>
+
+                <div className="text-center mt-6">
+                    <p className="text-sm font-sans text-vastu-text-light">
+                        Noch kein Konto?{' '}
+                        <Link to="/register" className="text-vastu-dark font-medium hover:underline">
+                            Registrieren
+                        </Link>
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}

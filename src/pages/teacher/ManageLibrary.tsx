@@ -1,0 +1,372 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
+import { LibraryItem, LibraryCategory } from '../../lib/types';
+import { Plus, Trash2, FileText, Save, X, Link as LinkIcon, Upload } from 'lucide-react';
+
+export default function ManageLibrary() {
+    const [items, setItems] = useState<LibraryItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const [isDragging, setIsDragging] = useState(false);
+    const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+
+    const [formData, setFormData] = useState<Partial<LibraryItem>>({
+        title: '', category: 'slides', file_url: '', description: ''
+    });
+
+    useEffect(() => { fetchLibrary(); }, []);
+
+    async function fetchLibrary() {
+        try {
+            const { data, error } = await supabase.from('library_items').select('*').order('title');
+            if (error) throw error;
+            setItems(data || []);
+        } catch (error) {
+            console.error('Error fetching library:', error);
+            alert('Fehler beim Laden der Bibliothek');
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleEdit(item: LibraryItem) {
+        setFormData({ title: item.title, category: item.category, file_url: item.file_url, description: item.description });
+        setEditingId(item.id);
+        setIsEditing(true);
+    }
+
+    function handleAddNew() {
+        setFormData({ title: '', category: 'slides', file_url: '', description: '' });
+        setEditingId(null);
+        setIsEditing(true);
+    }
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        if (!formData.title || !formData.file_url) return;
+
+        try {
+            let error;
+            if (editingId) {
+                const { error: updateError } = await supabase.from('library_items').update(formData).eq('id', editingId);
+                error = updateError;
+            } else {
+                const { error: insertError } = await supabase.from('library_items').insert([formData]);
+                error = insertError;
+            }
+            if (error) throw error;
+
+            alert(editingId ? 'Material erfolgreich aktualisiert!' : 'Material erfolgreich hinzugefügt!');
+            setIsEditing(false);
+            setEditingId(null);
+            setFormData({ title: '', category: 'slides', file_url: '', description: '' });
+            fetchLibrary();
+        } catch (error: any) {
+            alert(`Fehler beim Speichern: ${error.message || 'Unbekannter Fehler'}`);
+        }
+    }
+
+    async function handleDelete(id: string) {
+        if (!confirm('Möchtest du dieses Material wirklich löschen?')) return;
+        try {
+            const { error } = await supabase.from('library_items').delete().eq('id', id);
+            if (error) throw error;
+            fetchLibrary();
+        } catch (error) {
+            alert('Fehler beim Löschen');
+        }
+    }
+
+    const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+    const onDragLeave = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(false); };
+
+    const onDrop = async (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const files = Array.from(e.dataTransfer.files);
+        if (files.length === 0) return;
+
+        setUploadingFiles(prev => [...prev, ...files.map(f => f.name)]);
+        let successCount = 0;
+
+        for (const file of files) {
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random()}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('library_files').upload(fileName, file);
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage.from('library_files').getPublicUrl(fileName);
+                const title = file.name.replace(/\.[^/.]+$/, "");
+
+                const { error: dbError } = await supabase.from('library_items').insert([{
+                    title, category: 'slides', file_url: publicUrl, description: 'Per Drag & Drop hochgeladen'
+                }]);
+                if (dbError) throw dbError;
+                successCount++;
+            } catch (error) {
+                alert(`Fehler beim Hochladen von ${file.name}`);
+            } finally {
+                setUploadingFiles(prev => prev.filter(name => name !== file.name));
+            }
+        }
+        if (successCount > 0) fetchLibrary();
+    };
+
+    const categories: { id: LibraryCategory; label: string }[] = [
+        { id: 'slides', label: 'Folien' },
+        { id: 'bonus', label: 'Bonus' },
+        { id: 'guide', label: 'Leitfaden' },
+    ];
+
+    if (loading) return <div className="p-8">Laden...</div>;
+
+    return (
+        <div className="max-w-4xl mx-auto">
+            <div className="flex justify-between items-center mb-8">
+                <h1 className="text-3xl font-serif text-vastu-dark">Bibliothek verwalten</h1>
+                <button onClick={handleAddNew} className="flex items-center px-4 py-2 bg-vastu-dark text-white rounded-lg hover:bg-vastu-dark/90 transition-colors">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Material hinzufügen
+                </button>
+            </div>
+
+            {/* Drop Zone */}
+            <div
+                onDragOver={onDragOver}
+                onDragLeave={onDragLeave}
+                onDrop={onDrop}
+                className={`mb-8 border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${isDragging
+                    ? 'border-vastu-dark bg-vastu-dark/5 scale-[1.02]'
+                    : 'border-gray-300 hover:border-vastu-dark hover:bg-gray-50'
+                    }`}
+            >
+                <div className="flex flex-col items-center justify-center pointer-events-none">
+                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${isDragging ? 'bg-vastu-dark text-white' : 'bg-gray-100 text-gray-400'}`}>
+                        <Upload className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">
+                        {isDragging ? 'Dateien zum Hochladen loslassen' : 'Dateien hierher ziehen'}
+                    </h3>
+                    <p className="text-sm text-gray-500 max-w-sm">
+                        Lade mehrere Dateien gleichzeitig hoch. Sie werden automatisch als «Folien» zur Bibliothek hinzugefügt.
+                    </p>
+                </div>
+            </div>
+
+            {/* Upload Progress */}
+            {uploadingFiles.length > 0 && (
+                <div className="mb-8 bg-blue-50 border border-blue-100 rounded-xl p-4">
+                    <h4 className="text-sm font-bold text-blue-800 mb-2 flex items-center">
+                        <div className="animate-spin mr-2 h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                        Dateien werden hochgeladen ({uploadingFiles.length})...
+                    </h4>
+                    <ul className="space-y-1">
+                        {uploadingFiles.map((name, idx) => (
+                            <li key={idx} className="text-xs text-blue-600 truncate">{name}</li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {isEditing && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-vastu-light">
+                            <h2 className="text-xl font-bold text-vastu-dark">
+                                {editingId ? 'Material bearbeiten' : 'Neues Material'}
+                            </h2>
+                            <button onClick={() => setIsEditing(false)} className="text-gray-500 hover:text-red-500">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Titel *</label>
+                                <input type="text" required value={formData.title}
+                                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                                    className="w-full rounded-lg border-gray-300 focus:ring-vastu-dark focus:border-vastu-dark"
+                                    placeholder="z.B. Folien Modul 1" />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Kategorie *</label>
+                                <select value={formData.category}
+                                    onChange={e => setFormData({ ...formData, category: e.target.value as LibraryCategory })}
+                                    className="w-full rounded-lg border-gray-300 focus:ring-vastu-dark focus:border-vastu-dark">
+                                    {categories.map(cat => (
+                                        <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Datei *</label>
+                                <div className="flex gap-4 mb-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="uploadType"
+                                            checked={!formData.file_url?.startsWith('http')}
+                                            onChange={() => setFormData({ ...formData, file_url: '' })}
+                                            className="text-vastu-dark focus:ring-vastu-dark" />
+                                        <span className="text-sm">Datei hochladen</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="uploadType"
+                                            checked={formData.file_url?.startsWith('http') || false}
+                                            onChange={() => setFormData({ ...formData, file_url: 'https://' })}
+                                            className="text-vastu-dark focus:ring-vastu-dark" />
+                                        <span className="text-sm">Externer Link</span>
+                                    </label>
+                                </div>
+
+                                {formData.file_url?.startsWith('http') ? (
+                                    <div className="relative">
+                                        <LinkIcon className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
+                                        <input type="url" required value={formData.file_url}
+                                            onChange={e => setFormData({ ...formData, file_url: e.target.value })}
+                                            className="w-full pl-10 rounded-lg border-gray-300 focus:ring-vastu-dark focus:border-vastu-dark"
+                                            placeholder="https://..." />
+                                    </div>
+                                ) : (
+                                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-vastu-dark transition-colors relative">
+                                        <input type="file" onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            try {
+                                                setLoading(true);
+                                                const fileExt = file.name.split('.').pop();
+                                                const fileName = `${Math.random()}.${fileExt}`;
+                                                const { error: uploadError } = await supabase.storage.from('library_files').upload(fileName, file);
+                                                if (uploadError) throw uploadError;
+                                                const { data: { publicUrl } } = supabase.storage.from('library_files').getPublicUrl(fileName);
+                                                setFormData({ ...formData, file_url: publicUrl });
+                                            } catch (error) {
+                                                alert('Fehler beim Hochladen');
+                                            } finally {
+                                                setLoading(false);
+                                            }
+                                        }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                        <div className="space-y-2 pointer-events-none">
+                                            <div className="mx-auto w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center text-gray-400">
+                                                <Plus className="w-6 h-6" />
+                                            </div>
+                                            <div className="text-sm text-gray-600">
+                                                {formData.file_url ? (
+                                                    <span className="text-green-600 font-medium">Datei hochgeladen!</span>
+                                                ) : (
+                                                    <span>Klicke zum Auswählen</span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-gray-400">PDF, DOCX, XLSX bis 10 MB</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung (optional)</label>
+                                <textarea rows={3} value={formData.description}
+                                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                    className="w-full rounded-lg border-gray-300 focus:ring-vastu-dark focus:border-vastu-dark"
+                                    placeholder="Kurze Beschreibung..." />
+                            </div>
+
+                            <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
+                                <button type="button" onClick={() => setIsEditing(false)}
+                                    className="px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                    Abbrechen
+                                </button>
+                                <button type="submit"
+                                    className="px-6 py-2 bg-vastu-dark text-white rounded-lg hover:bg-vastu-dark/90 transition-colors flex items-center">
+                                    <Save className="w-4 h-4 mr-2" />
+                                    {editingId ? 'Änderungen speichern' : 'Speichern'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* List */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                {items.length === 0 ? (
+                    <div className="p-12 text-center text-gray-500">
+                        Noch keine Materialien. Klicke auf «Material hinzufügen».
+                    </div>
+                ) : (
+                    <>
+                        {/* Desktop */}
+                        <table className="w-full hidden md:table">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Titel</th>
+                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Kategorie</th>
+                                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {items.map((item) => (
+                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                            <div className="flex items-center">
+                                                <FileText className="w-4 h-4 mr-2 text-gray-400" />
+                                                {item.title}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            <span className="px-2 py-1 bg-gray-100 rounded text-xs font-medium uppercase">
+                                                {categories.find(c => c.id === item.category)?.label}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-sm">
+                                            <div className="flex gap-2">
+                                                <button onClick={() => handleEdit(item)} className="text-blue-400 hover:text-blue-600 p-2 hover:bg-blue-50 rounded-lg" title="Bearbeiten">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                                </button>
+                                                <button onClick={() => handleDelete(item.id)} className="text-red-400 hover:text-red-600 p-2 hover:bg-red-50 rounded-lg" title="Löschen">
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        {/* Mobile */}
+                        <div className="md:hidden divide-y divide-gray-100">
+                            {items.map((item) => (
+                                <div key={item.id} className="p-4 flex items-center justify-between">
+                                    <div className="flex-1 pr-4">
+                                        <span className="px-2 py-0.5 bg-gray-100 rounded text-[10px] font-medium uppercase text-gray-500 mr-2">
+                                            {categories.find(c => c.id === item.category)?.label}
+                                        </span>
+                                        <div className="font-medium text-gray-900 mt-1">{item.title}</div>
+                                    </div>
+                                    <div className="flex gap-2 flex-shrink-0">
+                                        <button onClick={() => handleEdit(item)} className="text-blue-400 hover:text-blue-600 p-2">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                                        </button>
+                                        <button onClick={() => handleDelete(item.id)} className="text-red-400 hover:text-red-600 p-2">
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* Mobile FAB */}
+            <button onClick={handleAddNew}
+                className="md:hidden fixed bottom-6 right-6 w-14 h-14 bg-vastu-dark text-white rounded-full shadow-xl flex items-center justify-center z-40 hover:scale-110 transition-transform">
+                <Plus className="w-8 h-8" />
+            </button>
+        </div>
+    );
+}
