@@ -22,7 +22,7 @@ export default {
             fontFamily: {
                 serif: ['"Playfair Display"', 'serif'],
                 body: ['"Cormorant"', 'serif'],
-                script: ['"Dancing Script"', 'cursive'],
+                script: ['"Great Vibes"', 'cursive'],
                 sans: ['"Inter"', 'sans-serif'],
             },
             backgroundImage: {

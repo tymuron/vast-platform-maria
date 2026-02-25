@@ -28,7 +28,7 @@ export default function TeacherLayout() {
             <aside className="w-64 bg-vastu-dark text-vastu-light flex flex-col fixed h-full z-20">
                 <div className="p-6 border-b border-white/10">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-vastu-accent rounded-full flex items-center justify-center text-vastu-dark font-serif font-bold text-lg">A</div>
+                        <div className="w-8 h-8 bg-vastu-accent rounded-full flex items-center justify-center text-vastu-dark font-serif font-bold text-lg">V</div>
                         <span className="font-serif text-xl tracking-wide text-vastu-accent">ADMIN</span>
                     </div>
                 </div>
