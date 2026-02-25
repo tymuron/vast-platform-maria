@@ -469,6 +469,38 @@ export default function CourseEditor() {
 
     async function fetchModules() {
         try {
+            if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
+                setModules([
+                    {
+                        id: 'pre', title: 'Sanfter Start', description: 'Einstieg in die Vastulogie', order_index: 0, available_from: '2026-02-07',
+                        days: [
+                            { id: 'pre-1', title: 'Willkommen & Einführung', description: 'Überblick über die Ausbildung', vimeo_url: '', date: '', order_index: 0, homework_description: '', materials: [] },
+                            { id: 'pre-2', title: 'Vastu auf Social Media', description: 'Sichtbarkeit aufbauen', vimeo_url: '', date: '', order_index: 1, homework_description: '', materials: [] },
+                        ],
+                        materials: []
+                    },
+                    {
+                        id: 'm1', title: 'Modul 1', description: 'Vastu Karte, Elemente, Reinigung & Energien', order_index: 1, available_from: '2026-03-20',
+                        days: [
+                            { id: 'm1-1', title: '1.1 Vastu Karte & Elemente', description: '', vimeo_url: '', date: '', order_index: 0, homework_description: 'Erstelle deine eigene Vastu-Karte', materials: [] },
+                            { id: 'm1-2', title: '1.2 Energetische Reinigung', description: '', vimeo_url: '', date: '', order_index: 1, homework_description: '', materials: [] },
+                            { id: 'm1-3', title: '1.3 Experimente mit den Elementen', description: '', vimeo_url: '', date: '', order_index: 2, homework_description: '', materials: [] },
+                            { id: 'm1-4', title: '1.4 Innere & Äußere Energien', description: '', vimeo_url: '', date: '', order_index: 3, homework_description: '', materials: [] },
+                        ],
+                        materials: []
+                    },
+                    {
+                        id: 'm2', title: 'Modul 2', description: 'Planeten, Charaktere, Sektoren, Yantren', order_index: 2, available_from: '2026-03-25',
+                        days: [
+                            { id: 'm2-1', title: '2.1 Planeten & Sektoren', description: '', vimeo_url: '', date: '', order_index: 0, homework_description: '', materials: [] },
+                        ],
+                        materials: []
+                    },
+                ]);
+                setLoading(false);
+                return;
+            }
+
             const { data, error } = await supabase
                 .from('weeks')
                 .select(`*, days (*, materials (*)), materials (*)`)

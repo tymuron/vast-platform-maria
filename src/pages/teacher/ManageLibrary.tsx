@@ -20,12 +20,22 @@ export default function ManageLibrary() {
 
     async function fetchLibrary() {
         try {
+            if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
+                setItems([
+                    { id: 'master1', title: 'Vastulogie Kursbuch — Vollständig', category: 'guide' as LibraryCategory, file_url: '#', description: 'Das vollständige Kursbuch der Ausbildung', created_at: '2026-02-01T10:00:00Z', is_master_file: true },
+                    { id: 'lib1', title: 'Alle Slides — Komplett', category: 'slides' as LibraryCategory, file_url: '#', description: 'Vollständige Sammlung aller Präsentationsfolien', created_at: '2026-02-05T10:00:00Z' },
+                    { id: 'lib2', title: 'Vastu Reinigung – Leitfaden', category: 'guide' as LibraryCategory, file_url: '#', description: 'Schritt-für-Schritt-Anleitung zur Reinigung', created_at: '2026-02-08T10:00:00Z' },
+                    { id: 'lib3', title: 'Bonus: Haustiere & Vastu', category: 'bonus' as LibraryCategory, file_url: '#', description: 'Zusätzliches Material zu Haustieren', created_at: '2026-02-10T10:00:00Z' },
+                ]);
+                setLoading(false);
+                return;
+            }
+
             const { data, error } = await supabase.from('library_items').select('*').order('title');
             if (error) throw error;
             setItems(data || []);
         } catch (error) {
             console.error('Error fetching library:', error);
-            alert('Fehler beim Laden der Bibliothek');
         } finally {
             setLoading(false);
         }

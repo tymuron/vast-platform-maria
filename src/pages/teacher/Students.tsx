@@ -17,6 +17,17 @@ export default function Students() {
     useEffect(() => {
         async function fetchStudents() {
             try {
+                if (!import.meta.env.VITE_SUPABASE_URL || import.meta.env.VITE_SUPABASE_URL.includes('placeholder')) {
+                    setStudents([
+                        { id: '1', full_name: 'Anna Schneider', email: 'anna@beispiel.de', created_at: '2026-02-10T10:00:00Z' },
+                        { id: '2', full_name: 'Lisa Müller', email: 'lisa@beispiel.de', created_at: '2026-02-12T14:30:00Z' },
+                        { id: '3', full_name: 'Sophie Wagner', email: 'sophie@beispiel.de', created_at: '2026-02-15T09:15:00Z' },
+                        { id: '4', full_name: 'Julia Fischer', email: 'julia@beispiel.de', created_at: '2026-02-18T11:45:00Z' },
+                    ]);
+                    setLoading(false);
+                    return;
+                }
+
                 const { data, error } = await supabase
                     .from('profiles')
                     .select('*')
