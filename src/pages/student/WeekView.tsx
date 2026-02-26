@@ -1,19 +1,20 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Play, FileText, Download, ChevronRight, Loader2 } from 'lucide-react';
-import { useWeeks } from '../../hooks/useCourse';
+import { useModules } from '../../hooks/useCourse';
 import { useState } from 'react';
+import { Module, Lektion, Material } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
 export default function WeekView() {
     const { weekId } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'days' | 'materials'>('days');
-    const { weeks, loading } = useWeeks();
+    const { modules, loading } = useModules();
 
-    const week = weeks.find(w => w.id === weekId);
+    const currentModule = modules.find((m: Module) => m.id === weekId);
 
     if (loading) return <div className="flex justify-center py-20"><Loader2 className="animate-spin text-vastu-gold" size={40} /></div>;
-    if (!week) return <div>Неделя не найдена</div>;
+    if (!currentModule) return <div>Modul nicht gefunden</div>;
 
     return (
         <div className="max-w-5xl mx-auto animate-fade-in">
@@ -22,16 +23,16 @@ export default function WeekView() {
                 className="flex items-center gap-2 text-vastu-text-light hover:text-vastu-dark mb-6 transition-colors"
             >
                 <ArrowLeft size={18} />
-                <span>Назад к курсу</span>
+                <span>Zurück zum Kurs</span>
             </button>
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-8">
                 <div className="bg-vastu-dark p-8 md:p-10 text-vastu-light relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-vastu-gold opacity-10 rounded-full blur-[80px] translate-x-1/2 -translate-y-1/2" />
 
-                    <h1 className="text-3xl md:text-4xl font-serif mb-4 relative z-10">{week.title}</h1>
+                    <h1 className="text-3xl md:text-4xl font-serif mb-4 relative z-10">{currentModule.title}</h1>
                     <p className="text-vastu-light/70 max-w-2xl font-light leading-relaxed relative z-10">
-                        {week.description ? week.description.replace(/<[^>]+>/g, '') : ''}
+                        {currentModule.description ? currentModule.description.replace(/<[^>]+>/g, '') : ''}
                     </p>
                 </div>
 
@@ -44,7 +45,7 @@ export default function WeekView() {
                             activeTab === 'days' ? "text-vastu-dark" : "text-vastu-text-light hover:text-vastu-dark"
                         )}
                     >
-                        Программа недели
+                        Lektionen
                         {activeTab === 'days' && (
                             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-vastu-gold" />
                         )}
@@ -56,9 +57,9 @@ export default function WeekView() {
                             activeTab === 'materials' ? "text-vastu-dark" : "text-vastu-text-light hover:text-vastu-dark"
                         )}
                     >
-                        Материалы недели
+                        Materialien
                         <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full text-xs">
-                            {week.weekMaterials?.length || 0}
+                            {currentModule.moduleMaterials?.length || 0}
                         </span>
                         {activeTab === 'materials' && (
                             <div className="absolute bottom-0 left-0 w-full h-0.5 bg-vastu-gold" />
@@ -69,10 +70,10 @@ export default function WeekView() {
                 <div className="p-6 md:p-8 min-h-[400px]">
                     {activeTab === 'days' ? (
                         <div className="space-y-4">
-                            {week.days.map((day) => (
+                            {currentModule.lektionen.map((lektion: Lektion) => (
                                 <Link
-                                    key={day.id}
-                                    to={`/student/week/${week.id}/day/${day.id}`}
+                                    key={lektion.id}
+                                    to={`/student/week/${currentModule.id}/day/${lektion.id}`}
                                     className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:border-vastu-gold/50 hover:bg-vastu-light/30 transition-all group"
                                 >
                                     <div className="flex items-center gap-4">
@@ -81,15 +82,15 @@ export default function WeekView() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <h3 className="font-medium text-lg text-vastu-dark">{day.title}</h3>
-                                                {day.date && (
+                                                <h3 className="font-medium text-lg text-vastu-dark">{lektion.title}</h3>
+                                                {lektion.date && (
                                                     <span className="text-xs font-medium text-vastu-gold bg-vastu-gold/10 px-2 py-0.5 rounded-full">
-                                                        {new Date(day.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+                                                        {new Date(lektion.date).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })}
                                                     </span>
                                                 )}
                                             </div>
                                             <p className="text-sm text-vastu-text-light line-clamp-1">
-                                                {day.description ? day.description.replace(/<[^>]+>/g, '') : ''}
+                                                {lektion.description ? lektion.description.replace(/<[^>]+>/g, '') : ''}
                                             </p>
                                         </div>
                                     </div>
@@ -99,8 +100,8 @@ export default function WeekView() {
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 gap-4">
-                            {week.weekMaterials && week.weekMaterials.length > 0 ? (
-                                week.weekMaterials.map((material) => (
+                            {currentModule.moduleMaterials && currentModule.moduleMaterials.length > 0 ? (
+                                currentModule.moduleMaterials.map((material: Material) => (
                                     <div key={material.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
                                         <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-vastu-dark shrink-0">
                                             <FileText size={20} />
@@ -115,14 +116,14 @@ export default function WeekView() {
                                                 className="text-sm text-vastu-gold hover:text-vastu-dark font-medium flex items-center gap-1 transition-colors"
                                             >
                                                 <Download size={14} />
-                                                Скачать
+                                                Herunterladen
                                             </a>
                                         </div>
                                     </div>
                                 ))
                             ) : (
                                 <div className="col-span-2 text-center py-12 text-vastu-text-light">
-                                    Нет дополнительных материалов для этой недели.
+                                    Keine zusätzlichen Materialien für dieses Modul.
                                 </div>
                             )}
                         </div>

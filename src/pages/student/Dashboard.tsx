@@ -19,7 +19,7 @@ function getModuleNumber(id: string): string {
 }
 
 export default function StudentDashboard() {
-    const { modules, loading, error: modulesError } = useModules();
+    const { modules, loading, error: _modulesError } = useModules();
     const location = useLocation();
     const navigate = useNavigate();
     const [showUnlockModal, setShowUnlockModal] = useState(false);

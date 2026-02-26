@@ -52,6 +52,7 @@ export interface LiveStream {
     date: string;
     video_url?: string;
     vimeo_url?: string;
+    rutube_url?: string;
     audio_url?: string;
     description?: string;
     created_at?: string;

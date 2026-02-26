@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, FileText, Download, Loader2, BookOpen, CheckCircle2, ChevronRight, Home } from 'lucide-react';
+import { FileText, Download, Loader2, BookOpen, CheckCircle2, ChevronRight, Home } from 'lucide-react';
 import { useLektion } from '../../hooks/useCourse';
 import VimeoPlayer from '../../components/VimeoPlayer';
 import { useState } from 'react';
